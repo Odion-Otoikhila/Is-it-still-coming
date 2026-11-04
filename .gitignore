@@ -1,0 +1,8 @@
+.env
+*.env
+.env.*
+gtfs/
+GTFS_All.zip
+
+gtfs/
+GTFS_All.zip
