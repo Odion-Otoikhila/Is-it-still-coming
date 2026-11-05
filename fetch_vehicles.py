@@ -33,11 +33,16 @@ print(len(feed.entity))
 with open("gtfs/trips.txt") as file:
 	trips = file.readlines()
 
+static_dic = {}
+
 for trip in trips:
-	print(trip)
-	time.sleep(0.5)
+	trip = trip.strip().split()
+	static_dic[trip[-1]] = trip[0:-1]
+	#time.sleep(0.5)
+
+print(static_dic)
 
 #for entity in feed.entity:
-    #if entity.HasField("vehicle"):
-        #print(entity.vehicle.trip)
+#    if entity.HasField("vehicle"):
+#        print(entity.vehicle.trip)
     
