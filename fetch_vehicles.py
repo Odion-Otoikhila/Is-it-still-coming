@@ -30,7 +30,14 @@ feed.ParseFromString(response.content)
 
 print(len(feed.entity))
 
-for entity in feed.entity:
-    if entity.HasField("vehicle"):
-        print(entity.vehicle.trip)
+with open("gtfs/trips.txt") as file:
+	trips = file.readlines()
+
+for trip in trips:
+	print(trip)
+	time.sleep(0.5)
+
+#for entity in feed.entity:
+    #if entity.HasField("vehicle"):
+        #print(entity.vehicle.trip)
     

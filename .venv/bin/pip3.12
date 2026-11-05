@@ -1,4 +1,4 @@
-#!/users/student/odion.otoikhila2/Is-it-still-coming/.venv/bin/python3
+#!/home/odion/Is-it-still-coming/.venv/bin/python3
 # -*- coding: utf-8 -*-
 import re
 import sys
