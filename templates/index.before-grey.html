@@ -1,0 +1,751 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Is It Still Coming? | Live Transit</title>
+
+<link rel="stylesheet"
+ href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<style>
+:root {
+    --bg: #08060e;
+    --panel: rgba(18, 10, 30, 0.96);
+    --border: #402858;
+    --text: #f5eeff;
+    --muted: #aa99c2;
+    --accent: #ae6bff;
+}
+
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    font-family: Inter, system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+}
+
+#map {
+    position: fixed;
+    inset: 0;
+    background: var(--bg);
+}
+
+/* Header */
+.header {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    right: 20px;
+    z-index: 1000;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    pointer-events: none;
+}
+
+.panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    backdrop-filter: blur(18px);
+    box-shadow: 0 12px 40px #0006;
+    pointer-events: auto;
+}
+
+.brand {
+    padding: 18px 22px;
+}
+
+.brand h1 {
+    margin: 0;
+    font-size: 21px;
+    letter-spacing: -0.8px;
+}
+
+.brand h1 span { color: var(--accent); }
+
+.subtitle {
+    margin-top: 5px;
+    font-size: 12px;
+    color: var(--muted);
+}
+
+.live {
+    padding: 14px 18px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1px;
+}
+
+.dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 12px var(--accent);
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    50% { opacity: .35; }
+}
+
+/* Sidebar */
+.sidebar {
+    position: absolute;
+    top: 116px;
+    left: 20px;
+    z-index: 900;
+    width: 320px;
+    padding: 20px;
+}
+
+.label {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--muted);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+}
+
+.search {
+    margin-top: 12px;
+    display: flex;
+    background: #100a19;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px;
+}
+
+.search:focus-within {
+    border-color: var(--accent);
+}
+
+.search input {
+    background: transparent;
+    border: none;
+    outline: none;
+    color: white;
+    width: 100%;
+    font-size: 14px;
+}
+
+.search input::placeholder {
+    color: #8c7aa4;
+}
+
+.stats {
+    margin-top: 24px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.stat {
+    background: #140c20;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 15px;
+}
+
+.stat-value {
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: -1px;
+    margin-top: 8px;
+}
+
+.accent { color: var(--accent); }
+
+.updated {
+    margin-top: 18px;
+    font-size: 12px;
+    color: var(--muted);
+}
+
+.hint {
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.6;
+}
+
+/* Custom bus marker */
+.bus-marker {
+    width: 34px;
+    height: 34px;
+    border-radius: 12px;
+    background: var(--accent);
+    border: 2px solid #e8ceff;
+    box-shadow: 0 0 18px #ae6bff70;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: #180b28;
+    transition: transform .2s;
+}
+
+.bus-marker svg {
+    width: 20px;
+    height: 20px;
+}
+
+.bus-marker:hover {
+    transform: scale(1.18);
+}
+
+/* Leaflet popup customization */
+.leaflet-popup-content-wrapper {
+    background: #1c102c;
+    color: white;
+    border: 1px solid #53376e;
+    border-radius: 14px;
+}
+
+.leaflet-popup-tip {
+    background: #1c102c;
+}
+
+.leaflet-popup-content {
+    margin: 16px;
+    font-family: Inter, system-ui, sans-serif;
+}
+
+.popup-title {
+    color: var(--accent);
+    font-size: 16px;
+    font-weight: 800;
+    margin-bottom: 12px;
+}
+
+.popup-row {
+    margin-top: 7px;
+    font-size: 12px;
+    color: #e4d5f5;
+}
+
+.leaflet-container a.leaflet-popup-close-button {
+    color: #e0caff;
+}
+
+.leaflet-control-zoom a {
+    background: #1b102b !important;
+    color: white !important;
+    border-color: #4d336b !important;
+}
+
+.leaflet-control-attribution {
+    background: #101720dd !important;
+    color: #a3afb8 !important;
+}
+
+.leaflet-control-attribution a {
+    color: #c8d7e0 !important;
+}
+
+/* Mobile */
+@media (max-width: 650px) {
+    .header {
+        top: 12px;
+        left: 12px;
+        right: 12px;
+    }
+
+    .brand { padding: 14px; }
+    .brand h1 { font-size: 17px; }
+    .live { padding: 12px; font-size: 10px; }
+
+    .sidebar {
+        top: auto;
+        bottom: 20px;
+        left: 12px;
+        right: 12px;
+        width: auto;
+        padding: 16px;
+    }
+
+    .stats { margin-top: 15px; }
+    .hint { display: none; }
+
+    .leaflet-control-zoom {
+        display: none;
+    }
+}
+
+/* PURPLE AND BLACK THEME */
+.panel {
+    background: linear-gradient(
+        135deg,
+        rgba(29, 15, 46, 0.97),
+        rgba(9, 6, 16, 0.96)
+    );
+    border: 1px solid rgba(174, 107, 255, 0.28);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.65);
+}
+
+.bus-marker {
+    background: linear-gradient(135deg, #d5a6ff, #8835da);
+    border: 2px solid #efd8ff;
+    box-shadow:
+        0 0 0 4px rgba(174, 107, 255, 0.15),
+        0 0 25px rgba(174, 107, 255, 0.65);
+}
+
+.search:focus-within {
+    box-shadow: 0 0 0 3px rgba(174, 107, 255, 0.15);
+}
+
+.stat {
+    background: #120a1f;
+    border: 1px solid #36234d;
+}
+
+.brand h1 span {
+    text-shadow: 0 0 20px rgba(174, 107, 255, 0.4);
+}
+
+</style>
+</head>
+
+<body>
+<div id="map"></div>
+
+<header class="header">
+    <div class="panel brand">
+        <h1>IS IT <span>STILL COMING?</span></h1>
+        <div class="subtitle">REAL-TIME TRANSIT TRACKER</div>
+    </div>
+
+    <div class="panel live">
+        <span class="dot" id="liveDot"></span>
+        <span id="liveText">CONNECTING</span>
+    </div>
+</header>
+
+<aside class="panel sidebar">
+    <div class="label">Find your bus</div>
+
+    <div class="search">
+        <input
+            id="routeSearch"
+            placeholder="Search route or route ID..."
+            autocomplete="off"
+            aria-label="Search bus route">
+    </div>
+
+    <div class="stats">
+        <div class="stat">
+            <div class="label">Vehicles</div>
+            <div class="stat-value accent" id="busCount">--</div>
+        </div>
+
+        <div class="stat">
+            <div class="label">Showing</div>
+            <div class="stat-value" id="shownCount">--</div>
+        </div>
+    </div>
+
+    <div class="updated" id="lastUpdated">
+        Waiting for live data...
+    </div>
+
+    <div class="hint">
+        Select a bus marker to view its details.
+        Bus positions are estimated between GPS updates.
+    </div>
+</aside>
+
+<script>
+const CARTO_KEY = "cb1_53l8_1_0e680ab0180698906509be84";
+
+// Start centred on Dublin
+const map = L.map("map", {
+    zoomControl: false,
+    preferCanvas: true
+}).setView([53.3498, -6.2603], 12);
+
+L.control.zoom({ position: "bottomright" }).addTo(map);
+
+// Dark Matter basemap
+L.tileLayer(
+    "https://basemaps.cartocdn.com/rastertiles/dark_all/" +
+    "{z}/{x}/{y}.png?key=" + encodeURIComponent(CARTO_KEY),
+    {
+        maxZoom: 20,
+        attribution:
+            '&copy; <a href="https://www.openstreetmap.org/copyright">' +
+            'OpenStreetMap</a> contributors, ' +
+            '&copy; <a href="https://carto.com/attribution/">' +
+            'CARTO</a>'
+    }
+).addTo(map);
+
+// Bus icon drawn as SVG
+const busSVG = `
+<svg viewBox="0 0 24 24" fill="none"
+ stroke="currentColor" stroke-width="2"
+ stroke-linecap="round" stroke-linejoin="round">
+ <rect x="5" y="3" width="14" height="17" rx="3"/>
+ <path d="M5 11h14M8 16h.01M16 16h.01"/>
+ <path d="M7 20v2M17 20v2"/>
+</svg>`;
+
+const busIcon = L.divIcon({
+    className: "",
+    html: `<div class="bus-marker">${busSVG}</div>`,
+    iconSize: [34, 34],
+    iconAnchor: [17, 17],
+    popupAnchor: [0, -20]
+});
+
+const markers = new Map();
+let allBuses = [];
+
+const search = document.getElementById("routeSearch");
+
+// Escape text before inserting into popup HTML
+function escapeHTML(value) {
+    return String(value ?? "").replace(/[&<>"']/g, char => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+    }[char]));
+}
+
+function popupContent(bus) {
+    return `
+        <div class="popup-title">
+            BUS ${escapeHTML(bus.route || "Unknown")}
+        </div>
+        <div class="popup-row">
+            Vehicle: ${escapeHTML(bus.id)}
+        </div>
+        <div class="popup-row">
+            Latitude: ${Number(bus.lat).toFixed(5)}
+        </div>
+        <div class="popup-row">
+            Longitude: ${Number(bus.lon).toFixed(5)}
+        </div>
+    `;
+}
+
+
+/* LIVE BUS ESTIMATION */
+const BusMotion = (() => {
+    const states = new Map();
+    const MAX_SECONDS = 12;
+    const MAX_SPEED = 25; // metres per second
+    const RAD = Math.PI / 180;
+    const EARTH = 6371000;
+
+    function distance(a, b) {
+        const dLat = (b.lat - a.lat) * RAD;
+        const dLon = (b.lng - a.lng) * RAD;
+        const p1 = a.lat * RAD;
+        const p2 = b.lat * RAD;
+
+        const h = Math.sin(dLat / 2) ** 2 +
+            Math.cos(p1) * Math.cos(p2) *
+            Math.sin(dLon / 2) ** 2;
+
+        return 2 * EARTH *
+            Math.asin(Math.min(1, Math.sqrt(h)));
+    }
+
+    function direction(a, b) {
+        const p1 = a.lat * RAD;
+        const p2 = b.lat * RAD;
+        const dLon = (b.lng - a.lng) * RAD;
+
+        const y = Math.sin(dLon) * Math.cos(p2);
+        const x = Math.cos(p1) * Math.sin(p2) -
+            Math.sin(p1) * Math.cos(p2) * Math.cos(dLon);
+
+        return (Math.atan2(y, x) / RAD + 360) % 360;
+    }
+
+    function predict(point, speed, heading, seconds) {
+        const delta = speed * seconds / EARTH;
+        const theta = heading * RAD;
+        const phi = point.lat * RAD;
+        const lambda = point.lng * RAD;
+
+        const nextPhi = Math.asin(
+            Math.sin(phi) * Math.cos(delta) +
+            Math.cos(phi) * Math.sin(delta) * Math.cos(theta)
+        );
+
+        const nextLambda = lambda + Math.atan2(
+            Math.sin(theta) * Math.sin(delta) * Math.cos(phi),
+            Math.cos(delta) - Math.sin(phi) * Math.sin(nextPhi)
+        );
+
+        return {
+            lat: nextPhi / RAD,
+            lng: nextLambda / RAD
+        };
+    }
+
+    function observe(id, marker, bus) {
+        const now = Date.now();
+        const raw = { lat: Number(bus.lat), lng: Number(bus.lon) };
+
+        const timestamp = Number(bus.timestamp);
+        const sampleTime =
+            bus.timestamp != null &&
+            Number.isFinite(timestamp) && timestamp > 0
+                ? timestamp * 1000 : now;
+
+        const previous = states.get(id);
+
+        if (previous && sampleTime < previous.sampleTime)
+            return;
+
+        if (previous &&
+            sampleTime === previous.sampleTime &&
+            raw.lat === previous.raw.lat &&
+            raw.lng === previous.raw.lng) {
+            return;
+        }
+
+        let speed = bus.speed != null &&
+            Number.isFinite(Number(bus.speed))
+                ? Number(bus.speed) : null;
+
+        let heading = bus.bearing != null &&
+            Number.isFinite(Number(bus.bearing))
+                ? Number(bus.bearing) : null;
+
+        // Estimate speed from two GPS positions if needed.
+        if (previous) {
+            const seconds =
+                (sampleTime - previous.sampleTime) / 1000;
+            const metres = distance(previous.raw, raw);
+
+            if (seconds >= 3 && seconds <= 180) {
+                if (metres < 4) {
+                    speed = 0;
+                } else {
+                    const estimatedSpeed = metres / seconds;
+
+                    if (estimatedSpeed <= MAX_SPEED) {
+                        if (speed === null)
+                            speed = estimatedSpeed;
+
+                        if (heading === null)
+                            heading = direction(previous.raw, raw);
+                    }
+                }
+            }
+        }
+
+        // Prevent unrealistic or stale predictions.
+        if (!Number.isFinite(speed) ||
+            speed < 0 ||
+            speed > MAX_SPEED ||
+            !Number.isFinite(heading) ||
+            sampleTime < now - 90000 ||
+            sampleTime > now + 20000) {
+            speed = 0;
+        }
+
+        const displayed = marker.getLatLng();
+
+        states.set(id, {
+            marker,
+            raw,
+            speed,
+            heading,
+            sampleTime,
+            receivedAt: now,
+            transitionAt: now,
+            from: {
+                lat: displayed.lat,
+                lng: displayed.lng
+            }
+        });
+    }
+
+    function animate() {
+        const now = Date.now();
+
+        for (const state of states.values()) {
+            if (!map.hasLayer(state.marker)) continue;
+
+            const elapsed = Math.min(
+                MAX_SECONDS,
+                Math.max(0, (now - state.receivedAt) / 1000)
+            );
+
+            const target = state.speed > 0
+                ? predict(
+                    state.raw,
+                    state.speed,
+                    state.heading,
+                    elapsed
+                )
+                : state.raw;
+
+            // Smoothly reconcile estimates with new GPS data.
+            const progress = Math.min(
+                1,
+                (now - state.transitionAt) / 1600
+            );
+
+            const eased =
+                progress * progress * (3 - 2 * progress);
+
+            state.marker.setLatLng([
+                state.from.lat +
+                    (target.lat - state.from.lat) * eased,
+                state.from.lng +
+                    (target.lng - state.from.lng) * eased
+            ]);
+        }
+    }
+
+    function start() {
+        let lastFrame = 0;
+
+        function frame(now) {
+            if (now - lastFrame >= 50) {
+                animate();
+                lastFrame = now;
+            }
+
+            requestAnimationFrame(frame);
+        }
+
+        requestAnimationFrame(frame);
+    }
+
+    return {
+        observe,
+        forget: id => states.delete(id),
+        start
+    };
+})();
+
+function drawBuses() {
+    const query = search.value.trim().toLowerCase();
+
+    const filtered = allBuses.filter(bus =>
+        !query ||
+        String(bus.route || "").toLowerCase().includes(query)
+    );
+
+    const activeIds = new Set();
+
+    for (const bus of filtered) {
+        if (!Number.isFinite(bus.lat) ||
+            !Number.isFinite(bus.lon)) continue;
+
+        const id = String(bus.id);
+        activeIds.add(id);
+
+        const position = [bus.lat, bus.lon];
+
+        if (markers.has(id)) {
+            const marker = markers.get(id);
+            BusMotion.observe(id, marker, bus);
+            marker.setPopupContent(popupContent(bus));
+        } else {
+            const marker = L.marker(position, {
+                icon: busIcon
+            }).addTo(map);
+
+            marker.bindPopup(popupContent(bus));
+            markers.set(id, marker);
+            BusMotion.observe(id, marker, bus);
+        }
+    }
+
+    // Remove vehicles no longer present or matching filter
+    for (const [id, marker] of markers) {
+        if (!activeIds.has(id)) {
+            map.removeLayer(marker);
+            markers.delete(id);
+            BusMotion.forget(id);
+        }
+    }
+
+    document.getElementById("busCount").textContent =
+        allBuses.length.toLocaleString();
+
+    document.getElementById("shownCount").textContent =
+        markers.size.toLocaleString();
+}
+
+async function updateBuses() {
+    try {
+        const response = await fetch("/api/vehicles", {
+            cache: "no-store"
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        if (!Array.isArray(data)) {
+            throw new Error("Unexpected API response");
+        }
+
+        allBuses = data.map(bus => ({
+            ...bus,
+            lat: Number(bus.lat),
+            lon: Number(bus.lon)
+        }));
+
+        drawBuses();
+
+        document.getElementById("liveText").textContent =
+            "FEED CONNECTED";
+
+        document.getElementById("liveDot").style.background =
+            "#ae6bff";
+
+        document.getElementById("lastUpdated").textContent =
+            "Last checked: " +
+            new Date().toLocaleTimeString();
+
+    } catch (error) {
+        console.error("Vehicle update failed:", error);
+
+        document.getElementById("liveText").textContent =
+            "CONNECTION ERROR";
+
+        document.getElementById("liveDot").style.background =
+            "#ff6060";
+
+        document.getElementById("lastUpdated").textContent =
+            "Unable to refresh. Showing last known positions.";
+    }
+}
+
+// Filter instantly as user types
+search.addEventListener("input", drawBuses);
+
+// Fetch immediately, then periodically
+updateBuses();
+setInterval(updateBuses, 30000);
+BusMotion.start();
+</script>
+</body>
+</html>
+
